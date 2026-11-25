@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 import sys, asyncio, httpx, random, json, socket, struct, time, os, uuid
 import itertools, secrets, traceback, base64
+async def on_glory_stop():
+    print_warning("🛑 Glory STOP command received from dashboard. Stopping all workers...")
+    bot_state.glory_started = False
+    for uid, worker in list(bot_state.account_workers.items()):
+        if worker and not worker.done():
+            worker.cancel()
+        bot_state.account_workers.pop(uid, None)
+        bot_state.close_writers_for_account(uid)
+        bot_state.update_status(uid, "STOPPED")
+    print_success("All glory workers stopped.")
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -3036,6 +3046,7 @@ async def main():
         bot_state.refresh_callbacks["on_account_added"] = on_account_added
         bot_state.refresh_callbacks["on_refresh_account"] = on_refresh_account
         bot_state.refresh_callbacks["on_glory_start"] = start_all_glory_workers
+        bot_state.refresh_callbacks["on_glory_stop"] = on_glory_stop
     except Exception: pass
 
     try:
