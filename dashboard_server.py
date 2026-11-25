@@ -1438,19 +1438,44 @@ async def handle_join_guild_single(request: web.Request) -> web.Response:
 async def handle_join_guild_all(request: web.Request) -> web.Response:
     gc = bot_state.guild_config or {}
     guild_id = str(gc.get("guild_id", "")).strip()
-    if not guild_id: return web.json_response({"status": "error", "error": "Guild ID not configured"}, status=400)
-    accounts = await _load_accounts_for_join()
-    if not accounts: return web.json_response({"status": "error", "error": "No active accounts"}, status=400)
+    region = str(gc.get("region", "IND")).strip().upper()
+    if not guild_id:
+        return web.json_response({"status": "error", "error": "Guild ID not configured"}, status=400)
+    
+    # Direct accounts.json se padho
+    accounts = []
+    if os.path.exists("accounts.json"):
+        try:
+            with open("accounts.json", "r", encoding="utf-8") as f:
+                accounts = json.load(f)
+        except Exception: pass
+        
+    if not accounts:
+        return web.json_response({"status": "error", "error": "No accounts found"}, status=400)
+        
     results = []
     for acc in accounts:
-        try:
-            status, data = await _send_external_join(guild_id, acc["uid"], acc["password"])
-            ok = isinstance(data, dict) and data.get("success") is True
-            results.append({"uid": acc["uid"], "ok": ok, "msg": data.get("message", "") if isinstance(data, dict) else ""})
-        except Exception as e:
-            results.append({"uid": acc["uid"], "ok": False, "msg": str(e)})
+        uid = str(acc.get("uid", "")).strip()
+        pwd = str(acc.get("password", "")).strip()
+        if not uid or not pwd: continue
+        
+        # Direct API call
+        res = await asyncio.to_thread(_join_guild_direct, guild_id, uid, pwd)
+        ok = res.get("success", False) if isinstance(res, dict) else False
+        msg = res.get("message", "") if isinstance(res, dict) else ""
+        
+        results.append({"uid": uid, "ok": ok, "msg": msg})
+        if ok:
+            bot_state.log(f"Joined guild: {uid}", "success", uid)
+        else:
+            bot_state.log(f"Join failed: {uid} - {msg}", "error", uid)
+            
     ok_count = sum(1 for r in results if r["ok"])
     bot_state.log(f"Guild join: {ok_count}/{len(results)} success", "success" if ok_count == len(results) else "warning")
+    
+    # Backup save karo
+    backup_accounts()
+    
     return web.json_response({"status": "ok", "results": results, "ok": ok_count, "total": len(results)})
 
 async def handle_glory_start(request: web.Request) -> web.Response:
