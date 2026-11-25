@@ -2,7 +2,7 @@
 """
 FreeFire Level Up Bot - Professional Web Dashboard & Real-Time EXP Tracker
 Embedded Async Web Server (aiohttp)
-Optimized for ultra-smooth operation, zero memory leaks, and dynamic multi-account control.
+Manual Create → Add → Run/Stop/Pause/Delete flow integrated.
 """
 
 import asyncio
@@ -28,10 +28,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
-# External guild APIs supplied for the dashboard setup flow.
 GUILD_JOIN_API = "https://danger-guild-management-web.vercel.app/join"
 GUILD_INFO_API = "https://danger-guild-management-web.vercel.app/guild"
 GUILD_CONFIG_FILE = "guild_config.json"
+CREATED_ACCOUNTS_FILE = "created_accounts.json"
 
 OB = "OB55"
 KEY = bytes([89,103,38,116,99,37,68,69,117,104,54,37,90,99,94,56])
@@ -49,7 +49,7 @@ GAME_HEADERS = {
 }
 
 REGION_SERVER_MAP = {
-    "IND": ("https://client.ind.freefiremobile.com", "client.ind.freefiremobile.com"),
+    "IND": ("https://clientbp.freefireind.in", "clientbp.freefireind.in"),
     "ME":  ("https://clientbp.ggblueshark.com", "clientbp.ggblueshark.com"),
     "VN":  ("https://clientbp.ggpolarbear.com", "clientbp.ggpolarbear.com"),
     "BD":  ("https://clientbp.ggwhitehawk.com", "clientbp.ggwhitehawk.com"),
@@ -84,12 +84,11 @@ def get_server_url(region):
 def fetch_single_clan(clan_id, region, token_cache):
     server_base, host = get_server_info(region)
     url = f"{server_base}/GetClanInfoByClanID"
-
-    try:  
-        my_data = encode_id_clan_pb2.MyData()  
-        my_data.field1 = int(clan_id)  
-        my_data.field2 = 1  
-        payload = encrypt_payload(my_data.SerializeToString())  
+    try:
+        my_data = encode_id_clan_pb2.MyData()
+        my_data.field1 = int(clan_id)
+        my_data.field2 = 1
+        payload = encrypt_payload(my_data.SerializeToString())
     except Exception as e:
         return {"clan_id": clan_id, "error": f"Protobuf failed: {str(e)}"}
 
@@ -98,11 +97,9 @@ def fetch_single_clan(clan_id, region, token_cache):
         token = creds.get('token')
         if not token:
             continue
-
         headers = GAME_HEADERS.copy()
         headers["Authorization"] = f"Bearer {token}" if not token.startswith("Bearer ") else token
         headers["Host"] = host
-
         try:
             res = requests.post(url, headers=headers, data=payload, verify=False, timeout=15.0)
             if res.status_code == 200:
@@ -113,7 +110,7 @@ def fetch_single_clan(clan_id, region, token_cache):
             else:
                 response = res
                 break
-        except Exception as ex:
+        except Exception:
             continue
 
     if not response or response.status_code != 200:
@@ -122,10 +119,10 @@ def fetch_single_clan(clan_id, region, token_cache):
     full_response = {}
     resp = None
     try:
-        resp = data_pb2.response()  
-        resp.ParseFromString(response.content)  
+        resp = data_pb2.response()
+        resp.ParseFromString(response.content)
         full_response = MessageToDict(resp, preserving_proto_field_name=True)
-    except Exception as e:
+    except Exception:
         pass
 
     guild_xp = 0
@@ -134,7 +131,6 @@ def fetch_single_clan(clan_id, region, token_cache):
             if field_desc.number == 36 and isinstance(val, int):
                 guild_xp = val
                 break
-
     if guild_xp == 0 and full_response:
         guild_xp = int(full_response.get("field_36") or full_response.get("xp") or 0)
 
@@ -144,7 +140,7 @@ def fetch_single_clan(clan_id, region, token_cache):
         "clan_level": getattr(resp, "rank", 4) if resp else full_response.get("rank", 4),
         "clan_name": getattr(resp, "special_code", None) if resp else (full_response.get("special_code") or f"Guild_{clan_id}"),
         "current_officer": full_response.get("current_officer", 0),
-        "current_members": full_response.get("current_members", 1),                
+        "current_members": full_response.get("current_members", 1),
         "max_members": full_response.get("max_members", 50),
         "Total guild xp": int(guild_xp),
         "welcome_message": getattr(resp, "welcome_message", "") if resp else full_response.get("welcome_message", ""),
@@ -184,21 +180,7 @@ EXP_TABLE: Dict[int, int] = {
     100: 32032884
 }
 
-async def handle_index(request: web.Request) -> web.Response:
-    content = FALLBACK_INDEX_HTML
-    if os.path.exists(TEMPLATE_PATH):
-        try:
-            with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception:
-            pass
-    return web.Response(text=content, content_type="text/html", charset="utf-8")
-
-
 BANNED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "banned_accounts.json")
-
-# ---- Purane accounts: accounts.json har baar "fresh pool" mein khaali ho jata hai, isliye purane accounts ka
-# ---- automatic archive (accounts_archive.json) rakhte hain. Dashboard se jab chaho unhe wapas activate kar sakte ho.
 ARCHIVE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "accounts_archive.json")
 
 def _read_json_list(path):
@@ -216,16 +198,18 @@ def _write_json_atomic(path, data):
     os.replace(tmp, path)
 
 def _archive_accounts():
-    """accounts.json ke saare (uid+password) accounts ko archive mein jod deta hai (duplicate nahi)."""
     try:
         cur = _read_json_list("accounts.json")
         arc = _read_json_list(ARCHIVE_FILE)
         have = {str(a.get("uid", "")) for a in arc}
         added = 0
         for a in cur:
-            uid = str(a.get("uid", "")).strip(); pwd = str(a.get("password", "")).strip()
+            uid = str(a.get("uid", "")).strip()
+            pwd = str(a.get("password", "")).strip()
             if uid and pwd and uid not in have:
-                arc.append({"uid": uid, "password": pwd, "saved_at": int(time.time())}); have.add(uid); added += 1
+                arc.append({"uid": uid, "password": pwd, "saved_at": int(time.time())})
+                have.add(uid)
+                added += 1
         if added:
             _write_json_atomic(ARCHIVE_FILE, arc)
         return added
@@ -243,113 +227,22 @@ def _banned_keys():
         return {str(k) for k in bot_state.banned_accounts.keys()}
 
 def _old_accounts_snapshot():
-    """Archive mein jo accounts abhi chal nahi rahe (aur banned nahi) - dashboard 'Purane accounts' ke liye. Password nahi bhejte."""
     arc = _read_json_list(ARCHIVE_FILE)
-    running = _running_guest_uids(); banned = _banned_keys()
+    running = _running_guest_uids()
+    banned = _banned_keys()
     inactive = [str(a["uid"]) for a in arc if a.get("uid") and a.get("password") and str(a["uid"]) not in running and str(a["uid"]) not in banned]
     return {"total": len(arc), "inactive": inactive[:300], "inactive_count": len(inactive),
             "banned": sum(1 for a in arc if str(a.get("uid", "")) in banned)}
-
-async def handle_activate_old(request: web.Request) -> web.Response:
-    """Purane (archive wale) accounts ko wapas active karta hai - wo apna kaam (squad mein judna aur khelna) shuru kar dete hain."""
-    try:
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        want_all = bool(body.get("all"))
-        want = [str(u).strip() for u in (body.get("uids") or [])]
-        arc = {str(a["uid"]): a for a in _read_json_list(ARCHIVE_FILE) if a.get("uid") and a.get("password")}
-        running = _running_guest_uids(); banned = _banned_keys()
-        pool = list(arc.keys()) if want_all else want
-        targets = [u for u in pool if u in arc and u not in running and u not in banned]
-        if not targets:
-            return web.json_response({"status": "ok", "activated": 0, "message": "Koi purana account activate karne layak nahi (sab chal rahe hain ya banned hain)"})
-        existing = _read_json_list("accounts.json")
-        have = {str(a.get("uid", "")) for a in existing}
-        for u in targets:
-            if u not in have:
-                existing.append({"uid": u, "password": arc[u]["password"]})
-        _write_json_atomic("accounts.json", existing)
-        cb = bot_state.refresh_callbacks.get("on_account_added")
-        if cb and bot_state.glory_started:
-            async def _go():
-                for u in targets:
-                    try:
-                        await cb({"uid": u, "password": arc[u]["password"]})
-                    except Exception as e:
-                        bot_state.log(f"Purana account {u} start nahi hua: {e}", "error")
-                    await asyncio.sleep(1.0)       # ek saath sab login na ho
-            asyncio.create_task(_go())
-            msg = f"{len(targets)} purane account activate ho rahe hain - squad mein judkar apna kaam shuru karenge"
-        else:
-            msg = f"{len(targets)} purane account accounts.json mein wapas daal diye - Glory start hote hi ye bhi chalenge"
-        bot_state.log(msg, "success")
-        return web.json_response({"status": "ok", "activated": len(targets), "message": msg})
-    except Exception as e:
-        return web.json_response({"status": "error", "error": str(e)})
-
-def _banned_snapshot():
-    """banned_accounts.json (app.py likhta hai) + memory se banned accounts ki list, dashboard ke liye."""
-    data = {}
-    try:
-        with open(BANNED_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f) or {}
-    except Exception:
-        data = dict(bot_state.banned_accounts)
-    out = []
-    for k, v in data.items():
-        if isinstance(v, dict):
-            row = {kk: vv for kk, vv in v.items() if isinstance(vv, (str, int, float, bool))}
-            row["key"] = str(k)
-            out.append(row)
-    out.sort(key=lambda r: r.get("found_at", 0), reverse=True)
-    return out
-
-async def handle_get_stats(request: web.Request) -> web.Response:
-    try:
-        _log_n = max(1, min(200, int(request.query.get("logs", 80))))
-    except Exception:
-        _log_n = 80
-    accounts_data = list(bot_state.accounts.values())
-    accounts_data.sort(key=lambda x: x.get("gained_exp", 0), reverse=True)
-    uptime_sec = max(1, int(time.time() - bot_state.start_time))
-    total_gained = bot_state.total_gained_exp
-    exp_per_hour = int((total_gained / uptime_sec) * 3600)
-    total_active_matches = sum(acc.get("active_matches", 0) for acc in accounts_data)
-
-    for acc in accounts_data:
-        uid_k = str(acc.get("uid", ""))
-        acc["uptime_seconds"] = bot_state.get_account_uptime(uid_k)
-        acc["is_paused"] = bot_state.is_paused(uid_k)
-
-    return web.json_response({
-        "total_accounts": len(bot_state.accounts),
-        "total_matches": bot_state.total_matches,
-        "total_matches_started": bot_state.total_matches_started,   # 🔥 NEW
-        "total_active_matches": total_active_matches,
-        "total_gained_exp": total_gained,
-        "exp_per_hour": exp_per_hour,
-        "accounts": accounts_data,
-        "logs": bot_state.logs[-_log_n:],
-        "relogins": bot_state.relogin_events,
-        "banned": _banned_snapshot(),
-        "squads": bot_state.squad_info,
-        "old_accounts": _old_accounts_snapshot(),
-        "uptime": uptime_sec
-    })
 
 def calculate_level_progress(level: int, current_exp: int) -> Dict[str, Any]:
     level = max(1, level)
     next_level = min(100, level + 1)
     base_exp = EXP_TABLE.get(level, 0)
     target_exp = EXP_TABLE.get(next_level, base_exp + 50000)
-    
     needed_for_level = max(1, target_exp - base_exp)
     earned_in_level = max(0, current_exp - base_exp)
     remaining_exp = max(0, target_exp - current_exp)
     progress_pct = min(100.0, max(0.0, (earned_in_level / needed_for_level) * 100.0))
-
     return {
         "next_level": next_level,
         "base_exp": base_exp,
@@ -366,13 +259,13 @@ class BotState:
         self.logs: List[Dict[str, Any]] = []
         self.max_logs = 200
         self.total_matches = 0
-        self.total_matches_started = 0      # 🔥 NEW
+        self.total_matches_started = 0
         self.total_gained_exp = 0
         self.start_time = time.time()
         self.account_workers: Dict[str, asyncio.Task] = {}
-        self.account_token_map: Dict[str, str] = {}  # uid -> token or token_prefix -> uid
-        self.auth_to_game_id: Dict[str, str] = {}   # guest login uid -> in-game account id
-        self.game_to_auth_id: Dict[str, str] = {}   # in-game account id -> guest login uid
+        self.account_token_map: Dict[str, str] = {}
+        self.auth_to_game_id: Dict[str, str] = {}
+        self.game_to_auth_id: Dict[str, str] = {}
         self.paused_accounts: set = set()
         self.refresh_callbacks: Dict[str, Any] = {}
         self.account_credentials: Dict[str, Dict[str, Any]] = {}
@@ -382,10 +275,10 @@ class BotState:
         self.guild_config: Dict[str, Any] = {}
         self.automation: Dict[str, Any] = {"running": False, "stage": "idle", "target": 0, "created": 0, "joined": 0, "failed": 0, "message": "Ready", "started_at": None}
         self.automation_task = None
-        self.relogin_events: Dict[str, Dict[str, Any]] = {}   # game uid -> re-login history (dashboard panel)
-        self.guild_live: Dict[str, Any] = {}                  # live guild glory / gain / members (dashboard panel)
-        self.banned_accounts: Dict[str, Dict[str, Any]] = {}  # banned accounts (login retry band) - dashboard panel
-        self.squad_info: Dict[str, Dict[str, Any]] = {}       # squad-wise registered/playing/waiting (dashboard sections)
+        self.relogin_events: Dict[str, Dict[str, Any]] = {}
+        self.guild_live: Dict[str, Any] = {}
+        self.banned_accounts: Dict[str, Dict[str, Any]] = {}
+        self.squad_info: Dict[str, Dict[str, Any]] = {}
 
     def register_writer(self, uid: str, writer):
         uid_str = str(uid)
@@ -411,7 +304,6 @@ class BotState:
             mapped = self.account_token_map[uid_str]
             candidates.add(str(mapped))
             candidates.add(str(mapped)[:16])
-
         for c in list(candidates):
             writers = list(self.active_writers.get(c, []))
             for w in writers:
@@ -451,13 +343,10 @@ class BotState:
             self.account_token_map[token[:16]] = uid_str
             if auth_uid_str:
                 self.account_token_map[auth_uid_str] = token
-
         prog = calculate_level_progress(level or 1, exp)
-
         lvl_val = level or 1
         acc_mode = "BR" if lvl_val < 3 else "LONE_WOLF"
         acc_mode_label = "Battle Royale (Lvl < 3)" if lvl_val < 3 else "Lone Wolf (Lvl 3+)"
-
         if uid_str not in self.accounts:
             self.accounts[uid_str] = {
                 "uid": uid_str,
@@ -550,7 +439,6 @@ class BotState:
             candidates.add(self.auth_to_game_id[uid_str])
         if uid_str in self.game_to_auth_id:
             candidates.add(self.game_to_auth_id[uid_str])
-
         target_acc = None
         target_key = uid_str
         for c in candidates:
@@ -558,7 +446,6 @@ class BotState:
                 target_acc = self.accounts[c]
                 target_key = c
                 break
-
         is_now_paused = not self.is_paused(uid_str)
         if is_now_paused:
             for c in candidates:
@@ -592,7 +479,6 @@ class BotState:
                     asyncio.create_task(self.refresh_callbacks["on_pause_toggle"](target_key, False))
                 except Exception:
                     pass
-
         return is_now_paused
 
     def toggle_pause_all(self) -> bool:
@@ -615,11 +501,9 @@ class BotState:
             if level is not None and level > 0:
                 acc["level"] = level
             acc["gained_exp"] = max(0, current_exp - acc["initial_exp"])
-            
             current_lvl = acc["level"]
             acc["mode"] = "BR" if current_lvl < 3 else "LONE_WOLF"
             acc["mode_label"] = "Battle Royale (Lvl < 3)" if current_lvl < 3 else "Lone Wolf (Lvl 3+)"
-
             prog = calculate_level_progress(acc["level"], current_exp)
             acc["next_level"] = prog["next_level"]
             acc["remaining_exp"] = prog["remaining_exp"]
@@ -628,15 +512,12 @@ class BotState:
             acc["earned_in_level"] = prog["earned_in_level"]
             acc["progress_pct"] = prog["progress_pct"]
             acc["last_updated"] = time.strftime("%H:%M:%S")
-
-            # Check for Level 2 -> 3 Mode Transition
             if old_level < 3 and current_lvl >= 3:
                 self.log(
                     f"🎉 LEVEL UP! UID {uid_str} ({acc['nickname']}) reached Level {current_lvl}! Switching from Battle Royale to Lone Wolf mode!",
                     "success",
                     uid_str
                 )
-
             diff = current_exp - old_exp
             if diff > 0:
                 self.log(
@@ -669,9 +550,7 @@ class BotState:
                 self.accounts[uid_str]["active_matches"] = active_matches
             self.accounts[uid_str]["last_updated"] = time.strftime("%H:%M:%S")
 
-
     def record_relogin(self, uid: str, state: str, message: str = ""):
-        """Dashboard ke liye re-login history. state: start | ok | fail"""
         uid_str = str(uid)
         ev = self.relogin_events.setdefault(uid_str, {
             "count": 0, "ok": 0, "fail": 0, "last_time": None, "last_status": "-", "last_message": ""
@@ -689,7 +568,6 @@ class BotState:
             ev["last_status"] = "FAILED"
 
     def increment_match_started(self):
-        """Track total matches STARTED (not completed)"""
         self.total_matches_started += 1
 
     def increment_match(self, uid: str):
@@ -703,7 +581,6 @@ class BotState:
 
     def recalc_totals(self):
         self.total_gained_exp = sum(acc.get("gained_exp", 0) for acc in self.accounts.values())
-
 
 bot_state = BotState()
 
@@ -742,7 +619,6 @@ async def _load_accounts_for_join():
     except Exception:
         return []
 
-
 def _save_guild_config(guild_id: str, region: str, guild_data: dict):
     payload = {
         "guild_id": str(guild_id),
@@ -763,7 +639,6 @@ def _save_guild_config(guild_id: str, region: str, guild_data: dict):
     bot_state.guild_config = payload
     return payload
 
-
 async def _fetch_external_guild_info(guild_id: str, region: str):
     async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
         r = await client.get(GUILD_INFO_API, params={"guild_id": guild_id, "region": region})
@@ -774,7 +649,6 @@ async def _fetch_external_guild_info(guild_id: str, region: str):
         if r.status_code >= 400:
             raise RuntimeError(f"Guild info API HTTP {r.status_code}: {data}")
         return data
-
 
 async def _send_external_join(guild_id: str, uid: str, password: str):
     async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
@@ -788,17 +662,15 @@ async def _send_external_join(guild_id: str, uid: str, password: str):
             data = {"raw": r.text}
         return r.status_code, data
 
-
 async def _run_automation(guild_id: str, region: str, total: int, threads: int, fresh_pool: bool):
-    """Generate accounts -> fetch guild -> send join requests -> start Glory."""
+    """Original auto-flow (kept for backward compatibility)."""
     bot_state.automation.update({
         "running": True, "stage": "generating", "target": total,
         "created": 0, "joined": 0, "failed": 0,
         "message": "Generating accounts…", "started_at": time.time()
     })
-    _archive_accounts()      # fresh pool se pehle purane accounts ka archive (khona nahi)
+    _archive_accounts()
     try:
-        # Keep the event loop responsive while the generator uses its own workers.
         if total > 0:
             result = await asyncio.to_thread(account_generator.generate_accounts, total, threads, fresh_pool)
             bot_state.automation["created"] = int(result.get("created", 0))
@@ -860,7 +732,6 @@ async def _run_automation(guild_id: str, region: str, total: int, threads: int, 
         bot_state.automation.update({"running": False, "stage": "error", "message": str(e)})
         bot_state.log(f"Automation failed: {e}", "error")
 
-
 async def handle_api_start(request: web.Request) -> web.Response:
     try:
         body = await request.json()
@@ -881,13 +752,10 @@ async def handle_api_start(request: web.Request) -> web.Response:
     bot_state.automation_task = asyncio.create_task(_run_automation(guild_id, region, total, threads, fresh_pool))
     return web.json_response({"status": "started", "automation": bot_state.automation})
 
-
 async def handle_api_automation(request: web.Request) -> web.Response:
     return web.json_response({"status": "success", "automation": bot_state.automation, "guild": bot_state.guild_config, "glory_started": bot_state.glory_started, "guild_live": bot_state.guild_live})
 
-
 async def handle_api_setup(request: web.Request) -> web.Response:
-    """Backward-compatible setup endpoint: join existing accounts and start Glory."""
     try:
         body = await request.json()
     except Exception:
@@ -901,7 +769,6 @@ async def handle_api_setup(request: web.Request) -> web.Response:
     asyncio.create_task(_run_automation(guild_id, region, 0, 1, False))
     return web.json_response({"status": "started", "message": "Automation started. Use /api/automation for progress."})
 
-
 async def handle_api_guild_config(request: web.Request) -> web.Response:
     return web.json_response({
         "status": "success",
@@ -910,8 +777,6 @@ async def handle_api_guild_config(request: web.Request) -> web.Response:
         "guild": bot_state.guild_config,
     })
 
-
-# ==================== GUILD INFO API ENDPOINT (AIOHTTP) ====================
 GUILD_CACHE_FILE = "guild_exp_cache.json"
 
 def load_guild_cache():
@@ -933,7 +798,6 @@ def save_guild_cache(cache_data):
 def get_persisted_baseline_xp(clan_id, current_xp):
     cache = load_guild_cache()
     clan_key = str(clan_id)
-    
     if clan_key not in cache or "old_xp" not in cache[clan_key]:
         cache[clan_key] = {
             "old_xp": current_xp,
@@ -942,7 +806,6 @@ def get_persisted_baseline_xp(clan_id, current_xp):
         }
         save_guild_cache(cache)
         return current_xp
-    
     return int(cache[clan_key]["old_xp"])
 
 async def handle_api_guild_info(request: web.Request) -> web.Response:
@@ -951,12 +814,9 @@ async def handle_api_guild_info(request: web.Request) -> web.Response:
         region = str(request.query.get("region", "IND")).strip().upper()
         if not guild_id:
             return web.json_response({"status": "error", "error": "guild_id is required"}, status=400)
-
-        # If the requested guild is the configured guild, return the saved values.
         if (bot_state.guild_config.get("guild_id") == guild_id and
                 bot_state.guild_config.get("region") == region):
             return web.json_response({"status": "success", **bot_state.guild_config})
-
         data = await _fetch_external_guild_info(guild_id, region)
         guild_data = data
         if isinstance(data.get("api_response"), dict):
@@ -965,8 +825,8 @@ async def handle_api_guild_info(request: web.Request) -> web.Response:
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)}, status=502)
 
-
 async def handle_add_account(request: web.Request) -> web.Response:
+    """Original /api/account/add — direct uid/password/token append."""
     try:
         data = await request.json()
         accounts_file = "accounts.json"
@@ -983,25 +843,19 @@ async def handle_add_account(request: web.Request) -> web.Response:
             pwd = str(data["password"]).strip()
             if not uid or not pwd:
                 return web.json_response({"status": "error", "error": "UID and Password are required"})
-
-            # Cancel previous worker if already running for this UID
             if uid in bot_state.account_workers:
                 try:
                     bot_state.account_workers[uid].cancel()
                 except Exception:
                     pass
                 bot_state.account_workers.pop(uid, None)
-
             existing = [acc for acc in existing if str(acc.get("uid", "")) != uid]
             existing.append({"uid": uid, "password": pwd})
             identifier = uid
-
         elif "token" in data:
             token = str(data["token"]).strip()
             if not token:
                 return web.json_response({"status": "error", "error": "Token is required"})
-
-            # Cancel worker if token prefix matches
             tok_key = token[:16]
             for k in list(bot_state.account_workers.keys()):
                 if k == tok_key or k.startswith(tok_key[:10]) or tok_key.startswith(k[:10]):
@@ -1010,7 +864,6 @@ async def handle_add_account(request: web.Request) -> web.Response:
                     except Exception:
                         pass
                     bot_state.account_workers.pop(k, None)
-
             existing = [acc for acc in existing if acc.get("token", "") != token]
             existing.append({"token": token})
             identifier = f"Token_{token[:8]}..."
@@ -1022,15 +875,11 @@ async def handle_add_account(request: web.Request) -> web.Response:
 
         bot_state.log(f"New account added to rotation: {identifier}", "success")
         _archive_accounts()
-        
-        # Trigger dynamic worker launch in Main.py
         if "on_account_added" in bot_state.refresh_callbacks:
             asyncio.create_task(bot_state.refresh_callbacks["on_account_added"](data))
-
         return web.json_response({"status": "ok"})
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)})
-
 
 async def handle_delete_account(request: web.Request) -> web.Response:
     try:
@@ -1039,22 +888,16 @@ async def handle_delete_account(request: web.Request) -> web.Response:
         req_auth_uid = str(data.get("auth_uid", "")).strip()
         if not req_uid and not req_auth_uid:
             return web.json_response({"status": "error", "error": "UID is required"})
-
-        # Collect ALL possible candidate identifiers for this account
         candidate_ids = set()
         if req_uid:
             candidate_ids.add(req_uid)
         if req_auth_uid:
             candidate_ids.add(req_auth_uid)
-
-        # Check game_to_auth and auth_to_game mappings
         for cid in list(candidate_ids):
             if cid in bot_state.game_to_auth_id:
                 candidate_ids.add(str(bot_state.game_to_auth_id[cid]))
             if cid in bot_state.auth_to_game_id:
                 candidate_ids.add(str(bot_state.auth_to_game_id[cid]))
-
-        # Inspect bot_state.accounts
         target_tokens = set()
         for cid in list(candidate_ids):
             acc_info = bot_state.accounts.get(cid, {})
@@ -1066,8 +909,6 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                 t = acc_info.get("token") or acc_info.get("access_token")
                 if t:
                     target_tokens.add(str(t))
-
-        # Inspect bot_state.account_credentials
         for cid in list(candidate_ids):
             creds = bot_state.account_credentials.get(cid, {})
             if creds:
@@ -1078,8 +919,6 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                 t = creds.get("token") or creds.get("access_token") or creds.get("auth_token")
                 if t:
                     target_tokens.add(str(t))
-
-        # Also clean token_cache.json if entries match
         token_cache_file = "token_cache.json"
         if os.path.exists(token_cache_file):
             try:
@@ -1103,8 +942,6 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                         json.dump(tcache, f, indent=2)
             except Exception:
                 pass
-
-        # Remove from accounts.json
         accounts_file = "accounts.json"
         if os.path.exists(accounts_file):
             try:
@@ -1124,13 +961,10 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                             is_match = True
                     if not is_match:
                         new_existing.append(acc)
-
                 with open(accounts_file, "w", encoding="utf-8") as f:
                     json.dump(new_existing, f, indent=2)
             except Exception:
                 pass
-
-        # Remove matching devices from devices.json
         devices_file = "devices.json"
         if os.path.exists(devices_file):
             try:
@@ -1153,16 +987,19 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                         json.dump(devices_data, f, indent=4)
             except Exception:
                 pass
-
-        # Remove from in-memory bot_state.accounts & credentials
+        # created_accounts.json bhi clean karo
+        try:
+            created = _read_json_list(CREATED_ACCOUNTS_FILE)
+            created = [a for a in created if str(a.get("uid", "")) not in candidate_ids]
+            _write_json_atomic(CREATED_ACCOUNTS_FILE, created)
+        except Exception:
+            pass
         for cid in candidate_ids:
             bot_state.accounts.pop(cid, None)
             bot_state.account_credentials.pop(cid, None)
             bot_state.auth_to_game_id.pop(cid, None)
             bot_state.game_to_auth_id.pop(cid, None)
             bot_state.account_token_map.pop(cid, None)
-
-        # Cancel matching worker tasks
         cancelled_keys = []
         for k, worker in list(bot_state.account_workers.items()):
             k_str = str(k)
@@ -1178,27 +1015,21 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                 except Exception:
                     pass
                 cancelled_keys.append(k)
-
         for k in cancelled_keys:
             bot_state.account_workers.pop(k, None)
-
         for cid in candidate_ids:
             bot_state.close_writers_for_account(cid)
-
-        # Trigger on_account_deleted callback in Main.py if registered
         if "on_account_deleted" in bot_state.refresh_callbacks:
             try:
                 asyncio.create_task(bot_state.refresh_callbacks["on_account_deleted"](list(candidate_ids)))
             except Exception:
                 pass
-
         target_repr = req_uid or req_auth_uid
         bot_state.log(f"Account {target_repr} completely deleted from system and stopped.", "warning", target_repr)
         bot_state.recalc_totals()
         return web.json_response({"status": "ok", "deleted": list(candidate_ids)})
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)})
-
 
 async def handle_refresh_account(request: web.Request) -> web.Response:
     try:
@@ -1209,7 +1040,6 @@ async def handle_refresh_account(request: web.Request) -> web.Response:
         return web.json_response({"status": "ok"})
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)})
-
 
 async def handle_restart_account(request: web.Request) -> web.Response:
     try:
@@ -1223,11 +1053,9 @@ async def handle_restart_account(request: web.Request) -> web.Response:
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)})
 
-
 async def handle_clear_logs(request: web.Request) -> web.Response:
     bot_state.logs.clear()
     return web.json_response({"status": "ok"})
-
 
 async def handle_toggle_pause(request: web.Request) -> web.Response:
     try:
@@ -1239,7 +1067,6 @@ async def handle_toggle_pause(request: web.Request) -> web.Response:
         return web.json_response({"status": "ok", "is_paused": is_paused})
     except Exception as e:
         return web.json_response({"status": "error", "error": str(e)})
-
 
 async def handle_toggle_pause_all(request: web.Request) -> web.Response:
     try:
@@ -1255,18 +1082,52 @@ async def handle_api_logs(request: web.Request) -> web.Response:
             t = entry.get("time", "")
             msg = entry.get("message", "")
             level = entry.get("level", "info")
-            color = "#34d399" if level == "success" else ("#f87171" if level == "warning" or level == "error" else "#38bdf8")
+            color = "#34d399" if level == "success" else ("#f87171" if level in ("warning", "error") else "#38bdf8")
             formatted_logs.append(f'<span style="color:{color}">[{t}] {msg}</span>')
         else:
             formatted_logs.append(str(entry))
     return web.json_response({"logs": formatted_logs}, status=200)
 
-
-# ==================== LIVE GUILD (glory / gain / members) ====================
-GUILD_LIVE_INTERVAL = 30   # seconds - game server se guild ka live data kitni der mein lena hai
+async def handle_activate_old(request: web.Request) -> web.Response:
+    try:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        want_all = bool(body.get("all"))
+        want = [str(u).strip() for u in (body.get("uids") or [])]
+        arc = {str(a["uid"]): a for a in _read_json_list(ARCHIVE_FILE) if a.get("uid") and a.get("password")}
+        running = _running_guest_uids()
+        banned = _banned_keys()
+        pool = list(arc.keys()) if want_all else want
+        targets = [u for u in pool if u in arc and u not in running and u not in banned]
+        if not targets:
+            return web.json_response({"status": "ok", "activated": 0, "message": "Koi purana account activate karne layak nahi (sab chal rahe hain ya banned hain)"})
+        existing = _read_json_list("accounts.json")
+        have = {str(a.get("uid", "")) for a in existing}
+        for u in targets:
+            if u not in have:
+                existing.append({"uid": u, "password": arc[u]["password"]})
+        _write_json_atomic("accounts.json", existing)
+        cb = bot_state.refresh_callbacks.get("on_account_added")
+        if cb and bot_state.glory_started:
+            async def _go():
+                for u in targets:
+                    try:
+                        await cb({"uid": u, "password": arc[u]["password"]})
+                    except Exception as e:
+                        bot_state.log(f"Purana account {u} start nahi hua: {e}", "error")
+                    await asyncio.sleep(1.0)
+            asyncio.create_task(_go())
+            msg = f"{len(targets)} purane account activate ho rahe hain"
+        else:
+            msg = f"{len(targets)} purane account accounts.json mein wapas daal diye"
+        bot_state.log(msg, "success")
+        return web.json_response({"status": "ok", "activated": len(targets), "message": msg})
+    except Exception as e:
+        return web.json_response({"status": "error", "error": str(e)})
 
 def _parse_clan_members(raw_hex):
-    """GetClanInfoByClanID ke response se guild_details + member_list (avatar/banner id ke saath) nikalta hai."""
     out = {"members": [], "members_online": None, "total_members": None, "leader_uid": None,
            "notice": "", "name": None, "level": None}
     try:
@@ -1298,7 +1159,6 @@ def _parse_clan_members(raw_hex):
     return out
 
 async def _guild_live_loop():
-    """Har GUILD_LIVE_INTERVAL second mein guild ka live glory + members laata hai (sirf padhta hai, 1 request)."""
     session_base = {}
     history = []
     last_gid = None
@@ -1367,17 +1227,341 @@ async def _guild_live_loop():
             prev = dict(bot_state.guild_live or {})
             prev.update(ok=False, error=msg, interval=GUILD_LIVE_INTERVAL)
             bot_state.guild_live = prev
-            if msg != last_err:          # same error baar baar log nahi karna
+            if msg != last_err:
                 last_err = msg
                 bot_state.log(f"[GUILD LIVE] {msg}", "warning")
         await asyncio.sleep(GUILD_LIVE_INTERVAL)
 
+GUILD_LIVE_INTERVAL = 30
+
+async def handle_get_stats(request: web.Request) -> web.Response:
+    try:
+        _log_n = max(1, min(200, int(request.query.get("logs", 80))))
+    except Exception:
+        _log_n = 80
+    accounts_data = list(bot_state.accounts.values())
+    accounts_data.sort(key=lambda x: x.get("gained_exp", 0), reverse=True)
+    uptime_sec = max(1, int(time.time() - bot_state.start_time))
+    total_gained = bot_state.total_gained_exp
+    exp_per_hour = int((total_gained / uptime_sec) * 3600)
+    total_active_matches = sum(acc.get("active_matches", 0) for acc in accounts_data)
+    for acc in accounts_data:
+        uid_k = str(acc.get("uid", ""))
+        acc["uptime_seconds"] = bot_state.get_account_uptime(uid_k)
+        acc["is_paused"] = bot_state.is_paused(uid_k)
+    return web.json_response({
+        "total_accounts": len(bot_state.accounts),
+        "total_matches": bot_state.total_matches,
+        "total_matches_started": bot_state.total_matches_started,
+        "total_active_matches": total_active_matches,
+        "total_gained_exp": total_gained,
+        "exp_per_hour": exp_per_hour,
+        "accounts": accounts_data,
+        "logs": bot_state.logs[-_log_n:],
+        "relogins": bot_state.relogin_events,
+        "banned": _banned_snapshot(),
+        "squads": bot_state.squad_info,
+        "old_accounts": _old_accounts_snapshot(),
+        "uptime": uptime_sec
+    })
+
+def _banned_snapshot():
+    data = {}
+    try:
+        with open(BANNED_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f) or {}
+    except Exception:
+        data = dict(bot_state.banned_accounts)
+    out = []
+    for k, v in data.items():
+        if isinstance(v, dict):
+            row = {kk: vv for kk, vv in v.items() if isinstance(vv, (str, int, float, bool))}
+            row["key"] = str(k)
+            out.append(row)
+    out.sort(key=lambda r: r.get("found_at", 0), reverse=True)
+    return out
+
+# ==================== NEW: MANUAL CREATE / ADD / RUN / STOP ====================
+async def handle_create_accounts(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        count = max(1, min(50, int(body.get("count", 1))))
+        threads = max(1, min(30, int(body.get("threads", min(5, count)))))
+    except Exception:
+        return web.json_response({"status": "error", "error": "Invalid count/threads"}, status=400)
+
+    try:
+        result = await asyncio.to_thread(account_generator.generate_accounts, count, threads, False)
+    except Exception as e:
+        bot_state.log(f"Account create failed: {e}", "error")
+        return web.json_response({"status": "error", "error": str(e)}, status=500)
+
+    created = _read_json_list(CREATED_ACCOUNTS_FILE)
+    all_accs = _read_json_list("accounts.json")
+    existing_uids = {str(a.get("uid", "")) for a in created}
+    added = 0
+    for a in all_accs:
+        u = str(a.get("uid", "")).strip()
+        if u and u not in existing_uids:
+            created.append(a)
+            existing_uids.add(u)
+            added += 1
+    _write_json_atomic(CREATED_ACCOUNTS_FILE, created)
+
+    # Purane accounts ko archive mein bhi daal do
+    _archive_accounts()
+
+    bot_state.log(f"✅ Created {result.get('created', 0)} new account(s)", "success")
+    return web.json_response({"status": "ok", "created": result.get("created", 0), "added": added, "total_in_created": len(created)})
+
+async def handle_list_created(request: web.Request) -> web.Response:
+    created = _read_json_list(CREATED_ACCOUNTS_FILE)
+    active_uids = set(bot_state.accounts.keys())
+    active_creds = {str(c.get("uid", "")) for c in _read_json_list("accounts.json")}
+    out = []
+    for a in created:
+        uid = str(a.get("uid", ""))
+        if not uid:
+            continue
+        out.append({
+            "uid": uid,
+            "password": a.get("password", ""),
+            "nickname": a.get("nickname", ""),
+            "account_id": a.get("account_id", ""),
+            "region": a.get("region", "IND"),
+            "created_at": a.get("created_at", ""),
+            "already_active": uid in active_creds or uid in active_uids,
+        })
+    return web.json_response({"status": "ok", "accounts": out, "total": len(out)})
+
+async def handle_add_account_to_bot(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    uid = str(body.get("uid", "")).strip()
+    if not uid:
+        return web.json_response({"status": "error", "error": "uid required"}, status=400)
+
+    created = _read_json_list(CREATED_ACCOUNTS_FILE)
+    match = next((a for a in created if str(a.get("uid", "")) == uid), None)
+    if not match:
+        return web.json_response({"status": "error", "error": "Account not in created list"}, status=404)
+    if not match.get("password"):
+        return web.json_response({"status": "error", "error": "Account has no password"}, status=400)
+
+    existing = _read_json_list("accounts.json")
+    if any(str(a.get("uid", "")) == uid for a in existing):
+        return web.json_response({"status": "ok", "message": "Account already active"})
+
+    existing.append({"uid": uid, "password": match["password"]})
+    _write_json_atomic("accounts.json", existing)
+
+    bot_state.accounts[uid] = {
+        "uid": uid, "auth_uid": uid,
+        "nickname": match.get("nickname") or f"Player_{uid[:6]}",
+        "region": match.get("region", "IND"),
+        "level": 1, "next_level": 2, "mode": "BR", "mode_label": "Battle Royale (Lvl < 3)",
+        "initial_exp": 0, "current_exp": 0, "gained_exp": 0,
+        "remaining_exp": 48, "target_exp": 48, "needed_for_level": 48,
+        "earned_in_level": 0, "progress_pct": 0.0, "likes": 0,
+        "status": "CONNECTING", "matches_played": 0, "active_matches": 0,
+        "last_match_time": None, "token": match.get("jwt", ""),
+        "start_time": time.time(), "is_paused": False, "paused_at": None,
+        "total_pause_duration": 0.0, "last_updated": time.strftime("%H:%M:%S")
+    }
+
+    if "on_account_added" in bot_state.refresh_callbacks and bot_state.glory_started:
+        try:
+            await bot_state.refresh_callbacks["on_account_added"]({"uid": uid, "password": match["password"]})
+        except Exception as e:
+            bot_state.log(f"Worker start failed for {uid}: {e}", "error", uid)
+
+    bot_state.log(f"➕ Account {uid} added to bot", "success", uid)
+    return web.json_response({"status": "ok", "message": "Account added to bot"})
+
+async def handle_run_account(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    uid = str(body.get("uid", "")).strip()
+    if not uid:
+        return web.json_response({"status": "error", "error": "uid required"}, status=400)
+    if bot_state.is_paused(uid):
+        bot_state.toggle_pause(uid)
+    existing = _read_json_list("accounts.json")
+    cred = next((a for a in existing if str(a.get("uid", "")) == uid), None)
+    if not cred:
+        created = _read_json_list(CREATED_ACCOUNTS_FILE)
+        match = next((a for a in created if str(a.get("uid", "")) == uid), None)
+        if not match:
+            return web.json_response({"status": "error", "error": "Account not found"}, status=404)
+        cred = {"uid": uid, "password": match["password"]}
+        existing.append(cred)
+        _write_json_atomic("accounts.json", existing)
+    if "on_account_added" in bot_state.refresh_callbacks and bot_state.glory_started:
+        try:
+            await bot_state.refresh_callbacks["on_account_added"](cred)
+            bot_state.update_status(uid, "ONLINE")
+            return web.json_response({"status": "ok", "message": "Account running"})
+        except Exception as e:
+            return web.json_response({"status": "error", "error": str(e)}, status=500)
+    return web.json_response({"status": "error", "error": "Glory not started yet. Start Glory first."}, status=400)
+
+async def handle_stop_account(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    uid = str(body.get("uid", "")).strip()
+    if not uid:
+        return web.json_response({"status": "error", "error": "uid required"}, status=400)
+    worker = bot_state.account_workers.get(uid)
+    if worker and not worker.done():
+        try:
+            worker.cancel()
+        except Exception:
+            pass
+        bot_state.account_workers.pop(uid, None)
+    bot_state.close_writers_for_account(uid)
+    bot_state.update_status(uid, "STOPPED", 0)
+    if "on_pause_toggle" in bot_state.refresh_callbacks:
+        try:
+            await bot_state.refresh_callbacks["on_pause_toggle"](uid, True)
+        except Exception:
+            pass
+    bot_state.log(f"⏹ Account {uid} stopped", "warning", uid)
+    return web.json_response({"status": "ok", "message": "Account stopped"})
+
+async def handle_delete_created(request: web.Request) -> web.Response:
+    """Delete from created_accounts.json + accounts.json + worker + bot_state."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    uid = str(body.get("uid", "")).strip()
+    if not uid:
+        return web.json_response({"status": "error", "error": "uid required"}, status=400)
+
+    created = _read_json_list(CREATED_ACCOUNTS_FILE)
+    before = len(created)
+    created = [a for a in created if str(a.get("uid", "")) != uid]
+    _write_json_atomic(CREATED_ACCOUNTS_FILE, created)
+
+    existing = _read_json_list("accounts.json")
+    existing = [a for a in existing if str(a.get("uid", "")) != uid]
+    _write_json_atomic("accounts.json", existing)
+
+    worker = bot_state.account_workers.get(uid)
+    if worker and not worker.done():
+        try:
+            worker.cancel()
+        except Exception:
+            pass
+        bot_state.account_workers.pop(uid, None)
+
+    bot_state.close_writers_for_account(uid)
+    bot_state.accounts.pop(uid, None)
+    bot_state.account_credentials.pop(uid, None)
+    bot_state.log(f"🗑 Account {uid} deleted", "warning", uid)
+    return web.json_response({"status": "ok", "removed": before - len(created)})
+
+async def handle_guild_set(request: web.Request) -> web.Response:
+    """Sirf guild ID save karo — koi account generate/join nahi."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    guild_id = str(body.get("guild_id", "")).strip()
+    region = str(body.get("region", "IND")).strip().upper() or "IND"
+    if not guild_id:
+        return web.json_response({"status": "error", "error": "Guild ID required"}, status=400)
+    try:
+        external_info = await _fetch_external_guild_info(guild_id, region)
+    except Exception as e:
+        _save_guild_config(guild_id, region, {})
+        bot_state.log(f"Guild saved but info fetch failed: {e}", "warning")
+        return web.json_response({"status": "ok", "warning": str(e), "guild": bot_state.guild_config})
+    guild_data = external_info
+    if isinstance(external_info.get("api_response"), dict):
+        guild_data = external_info["api_response"].get("clan_basic_info", external_info)
+    if not isinstance(guild_data, dict):
+        guild_data = {}
+    config = _save_guild_config(guild_id, region, guild_data)
+    bot_state.log(f"Guild saved: {config.get('guild_name', 'N/H')} | ID {guild_id} | Region {region}", "success")
+    return web.json_response({"status": "ok", "guild": config})
+
+async def handle_join_guild_single(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    uid = str(body.get("uid", "")).strip()
+    if not uid:
+        return web.json_response({"status": "error", "error": "uid required"}, status=400)
+    gc = bot_state.guild_config or {}
+    guild_id = str(gc.get("guild_id", "")).strip()
+    region = str(gc.get("region", "IND")).strip().upper()
+    if not guild_id:
+        return web.json_response({"status": "error", "error": "Guild ID not configured"}, status=400)
+    existing = _read_json_list("accounts.json")
+    cred = next((a for a in existing if str(a.get("uid", "")) == uid), None)
+    if not cred:
+        return web.json_response({"status": "error", "error": "Account not in active list"}, status=404)
+    try:
+        status, data = await _send_external_join(guild_id, uid, cred["password"])
+        ok = isinstance(data, dict) and data.get("success") is True
+        msg = data.get("message", "") if isinstance(data, dict) else ""
+        if ok:
+            bot_state.log(f"Guild join OK for {uid}", "success", uid)
+            return web.json_response({"status": "ok", "message": msg or "Join request sent"})
+        else:
+            bot_state.log(f"Guild join failed for {uid}: {msg}", "error", uid)
+            return web.json_response({"status": "error", "error": msg or f"HTTP {status}"}, status=502)
+    except Exception as e:
+        return web.json_response({"status": "error", "error": str(e)}, status=500)
+
+async def handle_join_guild_all(request: web.Request) -> web.Response:
+    gc = bot_state.guild_config or {}
+    guild_id = str(gc.get("guild_id", "")).strip()
+    if not guild_id:
+        return web.json_response({"status": "error", "error": "Guild ID not configured"}, status=400)
+    accounts = await _load_accounts_for_join()
+    if not accounts:
+        return web.json_response({"status": "error", "error": "No active accounts"}, status=400)
+    results = []
+    for acc in accounts:
+        try:
+            status, data = await _send_external_join(guild_id, acc["uid"], acc["password"])
+            ok = isinstance(data, dict) and data.get("success") is True
+            results.append({"uid": acc["uid"], "ok": ok, "msg": data.get("message", "") if isinstance(data, dict) else ""})
+        except Exception as e:
+            results.append({"uid": acc["uid"], "ok": False, "msg": str(e)})
+    ok_count = sum(1 for r in results if r["ok"])
+    bot_state.log(f"Guild join: {ok_count}/{len(results)} success", "success" if ok_count == len(results) else "warning")
+    return web.json_response({"status": "ok", "results": results, "ok": ok_count, "total": len(results)})
+
+async def handle_glory_start(request: web.Request) -> web.Response:
+    if "on_glory_start" not in bot_state.refresh_callbacks:
+        return web.json_response({"status": "error", "error": "Glory callback not ready"}, status=500)
+    try:
+        await bot_state.refresh_callbacks["on_glory_start"]()
+        bot_state.glory_started = True
+        bot_state.setup_complete = True
+        bot_state.log("Glory started", "success")
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        return web.json_response({"status": "error", "error": str(e)}, status=500)
 
 # ==================== START WEB DASHBOARD ====================
-
 async def start_web_dashboard(host: str = "0.0.0.0", port: int = 5000):
     app = web.Application()
     app.router.add_get("/", handle_index)
+    # Original (kept)
     app.router.add_post("/api/setup", handle_api_setup)
     app.router.add_post("/api/start", handle_api_start)
     app.router.add_get("/api/automation", handle_api_automation)
@@ -1393,13 +1577,24 @@ async def start_web_dashboard(host: str = "0.0.0.0", port: int = 5000):
     app.router.add_post("/api/account/restart", handle_restart_account)
     app.router.add_post("/api/account/pause", handle_toggle_pause)
     app.router.add_post("/api/account/pause_all", handle_toggle_pause_all)
-    app.router.add_post("/api/logs/clear", handle_clear_logs)    
+    app.router.add_post("/api/logs/clear", handle_clear_logs)
+    # NEW manual flow
+    app.router.add_post("/api/accounts/create", handle_create_accounts)
+    app.router.add_get("/api/accounts/created", handle_list_created)
+    app.router.add_post("/api/account/add-to-bot", handle_add_account_to_bot)
+    app.router.add_post("/api/account/run", handle_run_account)
+    app.router.add_post("/api/account/stop", handle_stop_account)
+    app.router.add_post("/api/account/delete-one", handle_delete_created)
+    app.router.add_post("/api/guild/set", handle_guild_set)
+    app.router.add_post("/api/guild/join-one", handle_join_guild_single)
+    app.router.add_post("/api/guild/join-all", handle_join_guild_all)
+    app.router.add_post("/api/glory/start", handle_glory_start)
 
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host, port)
     await site.start()
-    _archive_accounts()      # dashboard start par bhi: jo accounts accounts.json mein hain unka archive
+    _archive_accounts()
     try:
         asyncio.create_task(_guild_live_loop())
     except Exception:
