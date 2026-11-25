@@ -82,8 +82,7 @@ def get_server_url(region):
     return info[0] if isinstance(info, tuple) else info
 
 def fetch_single_clan(clan_id, region, token_cache):
-    server_base, host = get_server_info(region)
-    url = f"{server_base}/GetClanInfoByClanID"
+    """Guild info fetch - ab token ke apne server_url ko priority deta hai."""
     try:
         my_data = encode_id_clan_pb2.MyData()
         my_data.field1 = int(clan_id)
@@ -93,28 +92,38 @@ def fetch_single_clan(clan_id, region, token_cache):
         return {"clan_id": clan_id, "error": f"Protobuf failed: {str(e)}"}
 
     response = None
+    last_err = None
     for uid, creds in token_cache.items():
         token = creds.get('token')
         if not token:
             continue
+        # CHANGED: token ke apne server_url ko use karo, region map nahi
+        srv_url = creds.get('server_url') or get_server_info(region)[0]
+        host = srv_url.replace("https://", "").replace("http://", "").split("/")[0]
+        url = f"{srv_url.rstrip('/')}/GetClanInfoByClanID"
+
         headers = GAME_HEADERS.copy()
         headers["Authorization"] = f"Bearer {token}" if not token.startswith("Bearer ") else token
         headers["Host"] = host
+
         try:
             res = requests.post(url, headers=headers, data=payload, verify=False, timeout=15.0)
             if res.status_code == 200:
                 response = res
                 break
             elif "expired" in res.text.lower() or res.status_code == 401:
+                last_err = "token expired/401"
                 continue
             else:
+                last_err = f"HTTP {res.status_code}: {res.text[:100]}"
                 response = res
                 break
-        except Exception:
+        except Exception as ex:
+            last_err = str(ex)
             continue
 
     if not response or response.status_code != 200:
-        return {"clan_id": clan_id, "error": "All tokens failed or expired"}
+        return {"clan_id": clan_id, "error": f"All tokens failed ({last_err or 'expired'})"}
 
     full_response = {}
     resp = None
@@ -987,7 +996,6 @@ async def handle_delete_account(request: web.Request) -> web.Response:
                         json.dump(devices_data, f, indent=4)
             except Exception:
                 pass
-        # created_accounts.json bhi clean karo
         try:
             created = _read_json_list(CREATED_ACCOUNTS_FILE)
             created = [a for a in created if str(a.get("uid", "")) not in candidate_ids]
@@ -1177,7 +1185,7 @@ async def _guild_live_loop():
             creds = {}
             for _k, ad in list(bot_state.account_credentials.items()):
                 if isinstance(ad, dict) and ad.get("token") and ad.get("account_id"):
-                    creds.setdefault(str(ad["account_id"]), {"token": ad["token"]})
+                    creds.setdefault(str(ad["account_id"]), {"token": ad["token"], "server_url": ad.get("server_url")})
                 if len(creds) >= 6:
                     break
             if gid and creds:
@@ -1311,7 +1319,6 @@ async def handle_create_accounts(request: web.Request) -> web.Response:
             added += 1
     _write_json_atomic(CREATED_ACCOUNTS_FILE, created)
 
-    # Purane accounts ko archive mein bhi daal do
     _archive_accounts()
 
     bot_state.log(f"✅ Created {result.get('created', 0)} new account(s)", "success")
@@ -1438,7 +1445,6 @@ async def handle_stop_account(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok", "message": "Account stopped"})
 
 async def handle_delete_created(request: web.Request) -> web.Response:
-    """Delete from created_accounts.json + accounts.json + worker + bot_state."""
     try:
         body = await request.json()
     except Exception:
@@ -1471,7 +1477,6 @@ async def handle_delete_created(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok", "removed": before - len(created)})
 
 async def handle_guild_set(request: web.Request) -> web.Response:
-    """Sirf guild ID save karo — koi account generate/join nahi."""
     try:
         body = await request.json()
     except Exception:
