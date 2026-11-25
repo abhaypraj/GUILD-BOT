@@ -43,7 +43,7 @@ button,input,select{font:inherit;color:inherit}
 .main{max-width:1200px;margin:0 auto;padding:18px 16px 60px;display:grid;gap:18px}
 .two{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
 .panel{background:var(--panel);border:1px solid var(--edge);border-left:4px solid var(--c,var(--edge));border-radius:4px 16px 16px 4px;padding:20px;min-width:0}
-.panel.gold{--c:var(--gold)}.panel.sky{--c:var(--sky)}.panel.violet{--c:var(--violet)}.panel.fog{--c:var(--fog)}
+.panel.gold{--c:var(--gold)}.panel.sky{--c:var(--sky)}.panel.violet{--c:var(--violet)}.panel.fog{--c:var(--fog)}.panel.mint{--c:var(--mint)}.panel.rose{--c:var(--rose)}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
 .ph h2{margin:0;font:800 24px/1.1 var(--display);font-stretch:75%;letter-spacing:.01em}
 .ph p,.hint{margin:4px 0 0;color:var(--fog);font-size:13px;line-height:1.5;max-width:64ch}
@@ -103,6 +103,15 @@ button,input,select{font:inherit;color:inherit}
 .check input{accent-color:var(--gold);margin-top:3px;width:16px;height:16px;flex:none}
 .check small{display:block;color:var(--fog);font-size:12px;margin-top:2px}
 button{border:0;cursor:pointer}
+.btn{padding:12px 18px;border-radius:6px 12px 6px 12px;font:800 15px/1.1 var(--display);letter-spacing:.02em}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--ember));color:var(--gold-ink)}
+.btn-primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:var(--raised);color:var(--bone);border:1px solid var(--edge)}
+.btn-secondary:hover{border-color:var(--gold)}
+.btn-mint{background:var(--mint);color:#06281a}
+.btn-rose{background:var(--rose);color:#fff}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:4px 8px 4px 8px;font-weight:700}
 #start{width:100%;margin-top:14px;padding:15px 18px;border-radius:6px 14px 6px 14px;background:linear-gradient(135deg,var(--gold),var(--ember));color:var(--gold-ink);font:800 19px/1.1 var(--display);font-stretch:75%;letter-spacing:.01em}
 #start:hover:not(:disabled){filter:brightness(1.08)}
 #start:disabled{opacity:.5;cursor:not-allowed}
@@ -114,6 +123,25 @@ button{border:0;cursor:pointer}
 .stat{background:var(--pit);border:1px solid var(--edge);border-radius:6px 12px 6px 12px;padding:10px 12px}
 .stat span{display:block;color:var(--fog);font-size:12px}
 .stat strong{display:block;font:800 22px/1.15 var(--display);font-stretch:75%;margin-top:2px}
+
+/* ---------- NEW: manual create / add / active list ---------- */
+.list{display:grid;gap:8px;margin-top:12px}
+.card{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:var(--raised);border:1px solid var(--edge);border-radius:6px 12px 6px 12px;padding:10px 14px}
+.card .meta b{display:block;font-size:14px}
+.card .meta small{color:var(--fog);font-size:12px;display:block;margin-top:2px;word-break:break-all}
+.card .actions{display:flex;gap:6px;flex-wrap:wrap}
+.status-pill{font-size:11px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;display:inline-block;margin-left:6px}
+.st-ONLINE{color:var(--mint);border:1px solid rgba(88,224,160,.5);background:rgba(88,224,160,.09)}
+.st-CONNECTING{color:var(--ember);border:1px solid rgba(255,138,61,.55);background:rgba(255,138,61,.09)}
+.st-STOPPED,.st-PAUSED{color:var(--fog);border:1px solid var(--edge);background:rgba(165,157,182,.1)}
+.st-IN_MATCH{color:var(--sky);border:1px solid rgba(92,200,255,.5);background:rgba(92,200,255,.09)}
+.st-ERROR,.st-BANNED{color:var(--rose);border:1px solid rgba(255,92,116,.55);background:rgba(255,92,116,.09)}
+.notice{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:13px}
+.notice.err{background:rgba(255,92,116,.1);border:1px solid rgba(255,92,116,.4);color:var(--rose)}
+.notice.ok{background:rgba(88,224,160,.1);border:1px solid rgba(88,224,160,.4);color:var(--mint)}
+.notice.warn{background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.4);color:var(--ember)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--edge);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- guild ---------- */
 .ghead{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--edge);border-radius:6px 14px 6px 14px;background:var(--raised)}
@@ -134,7 +162,7 @@ button{border:0;cursor:pointer}
 .extra{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.extra:empty{display:none}
 .extra .gbox b{font-size:13px}
 .gupd{margin-top:8px;font-size:12px;color:var(--fog);text-align:right}
-.notice{display:none;margin-top:10px;font-size:13px;color:var(--bone);background:var(--pit);border:1px dashed var(--edge);border-radius:10px;padding:10px 12px}
+.notice2{display:none;margin-top:10px;font-size:13px;color:var(--bone);background:var(--pit);border:1px dashed var(--edge);border-radius:10px;padding:10px 12px}
 .mlist{margin-top:10px;max-height:300px;overflow:auto;display:grid;gap:8px;padding-right:2px}
 .mrow{display:flex;gap:12px;align-items:flex-start;background:var(--pit);border:1px solid var(--edge);border-radius:6px 12px 6px 12px;padding:10px 12px}
 .mrow.ours{border-color:rgba(92,200,255,.55);background:rgba(92,200,255,.06)}.mrow.lead{border-color:rgba(255,194,26,.6)}
@@ -256,18 +284,43 @@ button{border:0;cursor:pointer}
  <div class="tile"><span>Last re-login</span><strong id="tRlLast">—</strong><small id="tRlWho">abhi tak koi nahi</small></div>
 </section>
 
-<div class="two">
-<section class="panel gold" id="control">
- <div class="ph"><div><h2>Accounts add karo</h2><p>Ek button: naye accounts banao, guild mein join karwao aur Glory shuru karo. Purane accounts bhi sath mein chalte rehte hain.</p></div></div>
- <ol class="steps" id="steps"><li data-n="1">Accounts banao</li><li data-n="2">Guild dhundo</li><li data-n="3">Join request</li><li data-n="4">Glory shuru</li></ol>
- <div class="fields"><div class="field"><label for="guildId">Guild ID</label><input id="guildId" placeholder="Guild ID likho" inputmode="numeric" autocomplete="off"/></div><div class="field"><label for="region">Region</label><select id="region"><option>IND</option><option>BD</option><option>SG</option><option>ID</option><option>ME</option><option>VN</option><option>BR</option><option>NA</option><option>PK</option><option>TH</option></select></div></div>
- <div class="fields"><div class="field"><label for="total">Kitne naye accounts banane hain</label><input id="total" type="number" min="1" max="500" value="5"/></div><div class="field"><label for="threads">Generator threads</label><input id="threads" type="number" min="1" max="30" value="5"/></div></div>
- <div class="controls"><label class="check"><input id="fresh" type="checkbox" checked/><span>Naya accounts.json pool<small>Purane accounts hat-te nahi, wo archive mein save rehte hain. Neeche "Purane accounts" se wapas activate kar sakte ho.</small></span></label></div>
- <button id="start" type="button">Accounts banao, guild mein jodo, Glory shuru karo</button>
- <div class="progress"><div class="bar"><div class="fill" id="fill"></div></div><div class="stage"><span id="stage">Ready</span><b id="percent">0%</b></div></div>
- <div class="stats"><div class="stat"><span>Generated</span><strong id="created">0</strong></div><div class="stat"><span>Join success</span><strong id="joined">0</strong></div><div class="stat"><span>Join failed</span><strong id="failed">0</strong></div><div class="stat"><span>Glory</span><strong id="glory">OFF</strong></div></div>
+<!-- ============ NEW STEP 1: GUILD SET ============ -->
+<section class="panel violet" id="guildSetup">
+ <div class="ph"><div><h2>1️⃣ Guild ID set karo</h2><p>Pehle guild ID save karo. Koi account auto-generate nahi hoga.</p></div></div>
+ <div class="fields">
+   <div class="field"><label for="guildId">Guild ID</label><input id="guildId" placeholder="e.g. 3057000406" inputmode="numeric" autocomplete="off"/></div>
+   <div class="field"><label for="region">Region</label><select id="region"><option>IND</option><option>BD</option><option>SG</option><option>ID</option><option>ME</option><option>VN</option><option>BR</option><option>NA</option><option>PK</option><option>TH</option></select></div>
+ </div>
+ <button class="btn btn-primary" id="btnSaveGuild">💾 Guild ID Save Karo</button>
+ <div id="guildMsg" style="margin-top:10px"></div>
 </section>
 
+<!-- ============ NEW STEP 2: CREATE ACCOUNT ============ -->
+<section class="panel gold" id="control">
+ <div class="ph"><div><h2>2️⃣ Account Create Karo (Manual)</h2><p>Jitne chaho accounts banao. Har account turant save ho jayega (username + password niche dikhega).</p></div></div>
+ <div class="fields">
+   <div class="field"><label for="createCount">Kitne accounts?</label><input id="createCount" type="number" min="1" max="50" value="1"/></div>
+   <div class="field"><label for="createThreads">Threads</label><input id="createThreads" type="number" min="1" max="30" value="2"/></div>
+ </div>
+ <button class="btn btn-primary" id="btnCreate">➕ Account Create Karo</button>
+ <div id="createMsg" style="margin-top:10px"></div>
+ <h3 style="margin:18px 0 0;font:800 17px/1.2 var(--display);font-stretch:75%">📋 Created accounts (not yet added)</h3>
+ <div class="list" id="createdList"><div class="empty">Abhi koi created account nahi</div></div>
+</section>
+
+<!-- ============ NEW STEP 3: ACTIVE ACCOUNTS ============ -->
+<section class="panel sky" id="squads">
+ <div class="ph"><div><h2>3️⃣ Active Accounts</h2><p>Jo accounts bot mein added hain, unko yahan Run / Stop / Pause / Delete kar sakte ho.</p></div></div>
+ <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+   <button class="btn btn-secondary btn-sm" id="btnJoinAll">📨 Saare accounts ko guild join karwao</button>
+   <button class="btn btn-mint" id="btnStartGlory">▶ Glory Start Karo</button>
+ </div>
+ <div class="list" id="activeList"><div class="empty">Abhi koi active account nahi</div></div>
+ <div id="banned"></div>
+ <div id="oldAcc"></div>
+</section>
+
+<!-- ============ EXISTING: GUILD INFO ============ -->
 <section class="panel violet" id="guild">
  <div class="ph"><div><h2>Guild ki jaankari</h2><p>Guild ka data aur members yahan apne aap aate hain.</p></div></div>
  <div class="ghead"><div class="gicon">🛡️</div><div class="gtitle"><small>Guild name</small><b id="gName">N/H</b><div class="badges"><span class="badge lv" id="gLevelBadge">Level N/H</span><span class="badge rg" id="gRegionBadge">N/H</span></div></div></div>
@@ -282,19 +335,12 @@ button{border:0;cursor:pointer}
  <div class="mem"><div class="row"><span>Guild capacity</span><b id="gMemText">N/H</b></div><div class="bar"><div class="fill" id="gMemFill"></div></div></div>
  <div class="extra" id="gExtra"></div>
  <div class="gupd" id="gUpd"></div>
- <div class="notice" id="gNotice"></div>
+ <div class="notice2" id="gNotice"></div>
  <div class="mlist-head" style="margin-top:14px"><b>Guild members</b><small id="mCount"></small></div>
  <div class="mlist" id="mList"><div class="empty">Live member list ka intezaar…</div></div>
 </section>
-</div>
 
-<section class="panel sky" id="squads">
- <div class="ph"><div><h2>Squads aur accounts</h2><p>Har 4 accounts ki apni squad. Token expire hone par account apne aap dobara login hokar wapas khelta hai. Yahan har squad ka stage aur re-login history dikhti hai.</p></div></div>
- <div class="accs" id="accs"><div class="empty">Accounts abhi load nahi hue…</div></div>
- <div id="banned"></div>
- <div id="oldAcc"></div>
-</section>
-
+<!-- ============ EXISTING: LOG ============ -->
 <section class="panel fog" id="log">
  <div class="ph"><div><h2>Live activity log</h2><p>Naya event sabse upar. Hara success, peela warning, laal error, baingani re-login.</p></div><span class="live">Live</span></div>
  <div class="filters">
@@ -315,10 +361,20 @@ function fmtDur(sec){sec=Math.max(0,Math.floor(sec||0));const h=Math.floor(sec/3
 const SKIP=new Set(['guildname','guildregion','maxmembers','guildlevel','guildid','guild_id','region','guild_name','guild_region','max_members','guild_level','current_members','updated_at','details','status','raw']);
 const pretty=k=>String(k).replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\b\w/g,c=>c.toUpperCase());
 
+async function api(path, method='GET', body=null){
+  const opts = {method, headers:{'Content-Type':'application/json'}};
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(()=>({}));
+  return {ok: r.ok, status: r.status, data};
+}
+
 function renderGuild(g){if(!g)return;
  const name=g.guild_name||'N/H',lvl=g.guild_level??'N/H',reg=g.guild_region||g.region||'N/H';
  $('gName').textContent=name;$('hGuild').textContent=name;$('hLevel').textContent='Level '+lvl;$('hRegion').textContent=reg;$('gId').textContent=g.guild_id||'N/H';$('gRegion').textContent=reg;$('gLevel').textContent=lvl;
  $('gLevelBadge').textContent='Level '+lvl;$('gRegionBadge').textContent=reg;
+ if(g.guild_id) $('guildId').value = g.guild_id;
+ if(g.region) $('region').value = g.region;
  const curRaw=g.current_members??g.members,maxRaw=g.max_members,cur=num(curRaw),max=num(maxRaw);
  $('gMembers').textContent=curRaw??'N/H';$('gMax').textContent=maxRaw??'N/H';
  if(cur!==null&&max!==null&&max>0){const p=Math.min(100,Math.round(cur/max*100));$('gFree').textContent=Math.max(0,max-cur);$('gMemText').textContent=`${cur} / ${max} (${p}%)`;$('gMemFill').style.width=p+'%'}
@@ -361,12 +417,13 @@ function renderLive(g){
  $('mCount').textContent=ms.length?`${ms.length} members list mein`:'';
  $('mList').innerHTML=ms.length?ms.map(m=>{const av=m.avatar_id?('Avatar '+m.avatar_id):'Avatar default',bn=m.banner_id?('Banner '+m.banner_id):'Banner default';
   return `<div class="mrow${m.is_ours?' ours':''}${m.is_leader?' lead':''}"><div class="mav">${m.is_leader?'👑':(m.is_ours?'🤖':'🧑')}</div><div class="mi"><b>${esc(m.name)}${m.is_leader?'<span class="mtag l">LEADER</span>':''}${m.is_ours?'<span class="mtag o">HAMARA BOT'+(m.our_status?' • '+esc(String(m.our_status).replace('_',' ')):'')+'</span>':''}</b><small>Lv ${esc(m.level)} • Glory ${fmtN(m.score)} • UID ${esc(m.uid)}</small><div class="mchips"><span>🎭 ${esc(av)}</span><span>🏳 ${esc(bn)}</span></div></div></div>`}).join(''):'<div class="empty">Game ne member list nahi bheji (is guild ka member data khaali aaya).</div>'}
+
 let oldMsgText='',oldMsgAt=0;
 function renderOld(d){const o=d.old_accounts||{},n=o.inactive_count||0,list=o.inactive||[],box=$('oldAcc');
  let h='';
  if(o.total){
   h=`<div class="old-box"><div class="old-head"><b>📦 Purane accounts</b><span class="muted">${o.total} saved • ${n} abhi band${o.banned?` • ${o.banned} banned (retry nahi hoga)`:''}</span></div>`
-   +(n?`<div class="muted" style="font-size:11px;margin-top:6px">Ye accounts automatic save rehte hain (fresh pool se bhi nahi khote). Activate karte hi squad mein judkar apna kaam shuru kar denge.</div><div class="old-list">${list.slice(0,24).map(u=>`<button class="f" data-old="${esc(u)}" type="button">▶ ${esc(u)}</button>`).join('')}${n>24?`<span class="muted">+${n-24} aur</span>`:''}</div><button class="old-all" id="oldAll" type="button">▶ Sab ${n} purane accounts activate karo</button>`:'<div class="empty">Saare purane accounts chal rahe hain ✓</div>')
+   +(n?`<div class="muted" style="font-size:11px;margin-top:6px">Ye accounts automatic save rehte hain. Activate karte hi squad mein judkar apna kaam shuru kar denge.</div><div class="old-list">${list.slice(0,24).map(u=>`<button class="f" data-old="${esc(u)}" type="button">▶ ${esc(u)}</button>`).join('')}${n>24?`<span class="muted">+${n-24} aur</span>`:''}</div><button class="old-all" id="oldAll" type="button">▶ Sab ${n} purane accounts activate karo</button>`:'<div class="empty">Saare purane accounts chal rahe hain ✓</div>')
    +`<div class="hint">${(oldMsgText&&Date.now()-oldMsgAt<20000)?esc(oldMsgText):''}</div></div>`}
  if(box._h!==h){box._h=h;box.innerHTML=h}}
 $('oldAcc').onclick=async e=>{const t=(e.target&&e.target.closest)?e.target.closest('button'):null;if(!t)return;
@@ -377,12 +434,15 @@ $('oldAcc').onclick=async e=>{const t=(e.target&&e.target.closest)?e.target.clos
  t.disabled=true;
  try{const r=await fetch('/api/accounts/old/activate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();oldMsgText=j.message||j.error||'Ho gaya'}catch(err){oldMsgText='Server connection failed'}
  oldMsgAt=Date.now();$('oldAcc')._h=null;pollStats()};
+
 function renderBanned(d){const bn=d.banned||[];
  $('banned').innerHTML=bn.length?`<div class="bn-head">🚫 Banned accounts (${bn.length}) — in par ab login retry nahi hota</div>`+bn.map(b=>`<div class="bn-row"><b>${esc(b.key)}</b><span class="chip st-BANNED">${esc(b.reason||'BANNED')}</span><span class="muted">${b.account_id?('ID '+esc(b.account_id)+' • '):''}${b.found_at?esc(new Date(b.found_at*1000).toLocaleString()):''}</span></div>`).join(''):''}
-function pct(a){if(a.stage==='generating')return Math.min(45,Math.round((a.created/Math.max(1,a.target))*45));if(a.stage==='guild')return 55;if(a.stage==='joining')return Math.min(90,55+Math.round((a.joined+a.failed)/Math.max(1,a.target)*35));if(a.stage==='starting')return 96;if(a.stage==='done')return 100;return 0}
-async function poll(){try{const r=await fetch('/api/automation');const d=await r.json();const a=d.automation||{};let p=pct(a);renderSteps(a);$('fill').style.width=p+'%';$('percent').textContent=p+'%';$('stage').textContent=a.message||a.stage||'Ready';$('created').textContent=a.created||0;$('joined').textContent=a.joined||0;$('failed').textContent=a.failed||0;$('glory').textContent=d.glory_started?'ON':'OFF';$('statusPill').textContent=a.running?'● RUNNING':(a.stage==='error'?'● ERROR':(d.glory_started?'● GLORY ONLINE':'● READY'));$('statusPill').style.color=a.running?'var(--cyan)':(a.stage==='error'?'var(--red)':(d.glory_started?'var(--green)':'var(--muted)'));renderGuild(d.guild);renderLive(d.guild_live);if(a.running){$('start').disabled=true}else{$('start').disabled=false}}catch(e){}}
 
-/* ---------- live stats / accounts / log ---------- */
+async function poll(){try{const r=await fetch('/api/automation');const d=await r.json();const a=d.automation||{};
+ $('statusPill').textContent=a.running?'● RUNNING':(a.stage==='error'?'● ERROR':(d.glory_started?'● GLORY ONLINE':'● READY'));
+ $('statusPill').style.color=a.running?'var(--cyan)':(a.stage==='error'?'var(--red)':(d.glory_started?'var(--green)':'var(--muted)'));
+ renderGuild(d.guild);renderLive(d.guild_live);}catch(e){}}
+
 let filt='all',lastLogs=[];
 function renderOverview(d){const accs=d.accounts||[],rl=d.relogins||{};
  const online=accs.filter(a=>a.status==='ONLINE'||a.status==='IN_MATCH').length;
@@ -392,27 +452,7 @@ function renderOverview(d){const accs=d.accounts||[],rl=d.relogins||{};
  let ok=0,bad=0,last=null,who='';for(const [u,e] of Object.entries(rl)){ok+=e.ok||0;bad+=e.fail||0;if(e.last_time&&(!last||e.last_time>=last)){last=e.last_time;const a=accs.find(x=>String(x.uid)===String(u));who=(a&&a.nickname)||u}}
  $('tRl').innerHTML=`<span class="ok">${ok}</span> / <span class="bad">${bad}</span>`;
  $('tRlLast').textContent=last||'—';$('tRlWho').textContent=last?who:'abhi tak koi nahi'}
-function accRow(a,rl){const st=String(a.status||'ONLINE'),cls='st-'+st.replace(/[^A-Za-z]/g,'_').toUpperCase(),e=rl[String(a.uid)];
-  let r='<span class="muted">Re-login: abhi tak nahi hua</span>';
-  if(e){const c=e.last_status==='OK'?'ok':(e.last_status==='FAILED'?'bad':'warn'),t=e.last_status==='OK'?'✓ wapas online':(e.last_status==='FAILED'?'✗ fail':'⟳ chal raha hai');r=`<b>🔄 ${e.count}x</b> <span class="muted">(✓${e.ok} ✗${e.fail})</span> • <span class="${c}">${t}</span> <span class="muted">${esc(e.last_time||'')}</span>`}
-  return `<div class="acc"><div class="nm"><b>${esc(a.nickname||a.uid)}</b><small>UID ${esc(a.uid)} • ${esc(a.region||'')}</small></div><div class="chips"><span class="chip ${cls}">${esc(st.replace('_',' '))}</span>${a.spectating?'<span class="chip sq-wait" title="Out ho gaya, squad ke baaki abhi match mein hain - spectate kar raha hai">👁 SPECTATE</span>':''}</div><div class="meta"><span><i>Lv</i> ${esc(a.level??'-')}</span><span><i>EXP</i> +${fmtN(a.gained_exp||0)}</span><span><i>Matches</i> ${fmtN(a.matches_played||0)}${a.active_matches?` (${a.active_matches} live)`:''}</span><span><i>Uptime</i> ${fmtDur(a.uptime_seconds)}</span></div><div class="rl">${r}</div></div>`}
-function renderAccounts(d){const accs=d.accounts||[],rl=d.relogins||{},sq=d.squads||{};
- if(!accs.length&&!Object.keys(sq).length){$('accs').innerHTML='<div class="empty">Abhi koi account online nahi hai.</div>';return}
- const groups={};accs.forEach(a=>{const k=a.squad?String(a.squad):'0';(groups[k]=groups[k]||[]).push(a)});
- Object.keys(sq).forEach(k=>{groups[k]=groups[k]||[]});
- const keys=Object.keys(groups).sort((x,y)=>(+x||999)-(+y||999));
- $('accs').innerHTML=keys.map(k=>{
-  const arr=groups[k],info=sq[k]||{},size=info.size||4,reg=(info.registered!=null)?info.registered:arr.length;
-  const playing=!!info.playing||arr.some(a=>a.status==='IN_MATCH'),full=reg>=size;
-  let state,cls,box;
-  if(k==='0'){state='⏳ Squad assign ho raha hai';cls='sq-wait';box='waiting'}
-  else if(playing){state='🎮 Match khel rahi hai';cls='st-IN_MATCH';box='playing'}
-  else if(!full){state=`⏳ Poori nahi — ${reg}/${size} (${size-reg} jagah khali)`;cls='sq-wait';box='waiting'}
-  else{state='🤝 Team ban rahi hai';cls='sq-ready';box=''}
-  const pctv=Math.min(100,Math.round(reg/size*100));
-  return `<div class="sqsec ${box}"><div class="sqhead"><b>${k==='0'?'Squad —':'Squad '+esc(k)}</b><span class="chip ${cls}">${state}</span>${k==='0'?'':`<div class="sqbar"><i style="width:${pctv}%"></i></div><span class="muted" style="font-size:11px">${reg}/${size} accounts • ${arr.length} online</span>`}${info.stage?`<div class="muted" style="font-size:11px;width:100%">🧭 ${esc(info.stage)}${info.stage_age>=15?` (${info.stage_age}s se yahi)`:''}</div>`:''}</div>${arr.length?arr.slice(0,40).map(a=>accRow(a,rl)).join(''):'<div class="empty">Is squad ke accounts login ho rahe hain…</div>'}</div>`}).join('')}
 
-function logKind(x){const m=String(x.message||'');return /re-?login/i.test(m)?'relogin':(x.level||'info')}
 function renderLogs(){const hide=$('hideDbg').checked;
  let arr=lastLogs.filter(x=>x&&typeof x==='object');
  if(hide)arr=arr.filter(x=>!/^\[RAW-IN/.test(String(x.message||'')));
@@ -421,20 +461,201 @@ function renderLogs(){const hide=$('hideDbg').checked;
  box.innerHTML=arr.slice(-150).reverse().map(x=>{const lv=['success','error','warning'].includes(x.level)?x.level:'info',re=/re-?login/i.test(String(x.message||''));
   return `<div class="log lv-${lv}"><span class="t">${esc(x.time||'')}</span><span class="tag ${re?'tg-relogin':'tg-'+lv}">${re?'RE-LOGIN':lv.toUpperCase()}</span><span class="m">${esc(x.message||'')}</span></div>`}).join('')||'<div class="muted" style="padding:10px">Is filter mein abhi koi log nahi.</div>';
  box.scrollTop=keep}
-async function pollStats(){try{const r=await fetch('/api/stats?logs=200');const d=await r.json();renderOverview(d);renderAccounts(d);renderBanned(d);renderOld(d);lastLogs=d.logs||[];renderLogs()}catch(e){}}
-document.querySelectorAll('.f').forEach(b=>b.onclick=()=>{filt=b.dataset.f;document.querySelectorAll('.f').forEach(x=>x.classList.toggle('on',x===b));renderLogs()});
+
+async function pollStats(){try{const r=await fetch('/api/stats?logs=200');const d=await r.json();renderOverview(d);renderBanned(d);renderOld(d);lastLogs=d.logs||[];renderLogs()}catch(e){}}
+
+document.querySelectorAll('.f[data-f]').forEach(b=>b.onclick=()=>{filt=b.dataset.f;document.querySelectorAll('.f[data-f]').forEach(x=>x.classList.toggle('on',x===b));renderLogs()});
 $('hideDbg').onchange=renderLogs;
 
-$('start').onclick=async()=>{const guild_id=$('guildId').value.trim(),region=$('region').value,total=Number($('total').value),threads=Number($('threads').value),fresh=$('fresh').checked;if(!guild_id)return alert('Guild ID enter karo');$('start').disabled=true;try{const r=await fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id,region,total_accounts:total,threads,fresh_pool:fresh})});const d=await r.json();if(!r.ok)alert(d.error||'Start failed')}catch(e){alert('Server connection failed')}};
-setInterval(poll,1000);setInterval(pollStats,2000);poll();pollStats();
+/* ============ NEW: CREATE ACCOUNT ============ */
+$('btnCreate').onclick = async ()=>{
+  const btn = $('btnCreate');
+  const count = parseInt($('createCount').value) || 1;
+  const threads = parseInt($('createThreads').value) || 2;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
+  $('createMsg').innerHTML = '<div class="notice">Creating… (thoda time lagega)</div>';
+  try {
+    const {ok, data} = await api('/api/accounts/create', 'POST', {count, threads});
+    if(ok && data.status==='ok'){
+      $('createMsg').innerHTML = `<div class="notice ok">✓ ${data.created} account(s) created</div>`;
+    } else {
+      $('createMsg').innerHTML = `<div class="notice err">✗ ${esc(data.error||'failed')}</div>`;
+    }
+    await loadCreated();
+  } catch(e){
+    $('createMsg').innerHTML = `<div class="notice err">✗ ${esc(e.message||e)}</div>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '➕ Account Create Karo';
+  }
+};
 
-/* ---------- pipeline steps (accounts banao -> guild -> join -> glory) ---------- */
-function renderSteps(a){const li=document.querySelectorAll('#steps li');if(!li.length)return;
- const order=['generating','guild','joining','starting'],idx=order.indexOf(a.stage),done=a.stage==='done';
- li.forEach((el,i)=>{el.className=done||(idx>-1&&i<idx)?'done':(i===idx?(a.running?'now':''):'')});
- if(a.stage==='error'){li.forEach(el=>{if(el.className==='now')el.className='err'})}}
+async function loadCreated(){
+  const {data} = await api('/api/accounts/created');
+  const list = data.accounts || [];
+  if(!list.length){
+    $('createdList').innerHTML = '<div class="empty">Abhi koi created account nahi</div>';
+    return;
+  }
+  $('createdList').innerHTML = list.map(a=>`
+    <div class="card">
+      <div class="meta">
+        <b>${esc(a.nickname||a.uid)}</b>
+        <small>UID: ${esc(a.uid)} • Pass: ${esc(a.password)} • AccID: ${esc(a.account_id||'-')}</small>
+        ${a.already_active ? '<span class="status-pill st-ONLINE">Already Active</span>' : ''}
+      </div>
+      <div class="actions">
+        ${a.already_active ? '' : `<button class="btn btn-mint btn-sm" data-add="${esc(a.uid)}">➕ Add to Bot</button>`}
+        <button class="btn btn-rose btn-sm" data-del="${esc(a.uid)}">🗑 Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
 
-/* ---------- nav: highlight the section being read ---------- */
+$('createdList').onclick = async (e)=>{
+  const add = e.target.closest('[data-add]');
+  const del = e.target.closest('[data-del]');
+  if(add){
+    const uid = add.dataset.add;
+    add.disabled = true; add.textContent = 'Adding…';
+    const {ok, data} = await api('/api/account/add-to-bot', 'POST', {uid});
+    if(!ok) alert('Add failed: ' + (data.error||''));
+    await loadCreated(); await loadActive();
+  } else if(del){
+    const uid = del.dataset.del;
+    if(!confirm('Delete account ' + uid + '?')) return;
+    await api('/api/account/delete-one', 'POST', {uid});
+    await loadCreated(); await loadActive();
+  }
+};
+
+/* ============ NEW: ACTIVE LIST ============ */
+async function loadActive(){
+  const {data} = await api('/api/stats?logs=100');
+  const accs = data.accounts || [];
+  if(!accs.length){
+    $('activeList').innerHTML = '<div class="empty">Abhi koi active account nahi</div>';
+    return;
+  }
+  $('activeList').innerHTML = accs.map(a=>{
+    const st = String(a.status||'ONLINE');
+    const cls = 'st-' + st.replace(/[^A-Za-z]/g,'_').toUpperCase();
+    return `
+      <div class="card">
+        <div class="meta">
+          <b>${esc(a.nickname||a.uid)}<span class="status-pill ${cls}">${esc(st)}</span></b>
+          <small>UID: ${esc(a.uid)} • Level ${a.level||'-'} • EXP +${fmtN(a.gained_exp||0)} • Matches ${fmtN(a.matches_played||0)}</small>
+        </div>
+        <div class="actions">
+          <button class="btn btn-mint btn-sm" data-run="${esc(a.uid)}">▶ Run</button>
+          <button class="btn btn-secondary btn-sm" data-stop="${esc(a.uid)}">⏹ Stop</button>
+          <button class="btn btn-secondary btn-sm" data-pause="${esc(a.uid)}">⏸ Pause</button>
+          <button class="btn btn-secondary btn-sm" data-join="${esc(a.uid)}">📨 Join</button>
+          <button class="btn btn-rose btn-sm" data-delactive="${esc(a.uid)}">🗑 Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+$('activeList').onclick = async (e)=>{
+  const run = e.target.closest('[data-run]');
+  const stop = e.target.closest('[data-stop]');
+  const pause = e.target.closest('[data-pause]');
+  const join = e.target.closest('[data-join]');
+  const del = e.target.closest('[data-delactive]');
+  if(run){
+    const {ok,data} = await api('/api/account/run','POST',{uid:run.dataset.run});
+    if(!ok) alert('Run failed: '+(data.error||''));
+    await loadActive();
+  } else if(stop){
+    await api('/api/account/stop','POST',{uid:stop.dataset.stop});
+    await loadActive();
+  } else if(pause){
+    await api('/api/account/pause','POST',{uid:pause.dataset.pause});
+    await loadActive();
+  } else if(join){
+    const {ok,data} = await api('/api/guild/join-one','POST',{uid:join.dataset.join});
+    alert(ok ? '✓ Join sent' : '✗ ' + (data.error||'failed'));
+    await loadActive();
+  } else if(del){
+    if(!confirm('Delete account ' + del.dataset.delactive + '?')) return;
+    await api('/api/account/delete-one','POST',{uid:del.dataset.delactive});
+    await loadActive();
+  }
+};
+
+/* ============ NEW: GUILD SAVE ============ */
+$('btnSaveGuild').onclick = async ()=>{
+  const btn = $('btnSaveGuild');
+  const gid = $('guildId').value.trim();
+  const region = $('region').value;
+  if(!gid){ $('guildMsg').innerHTML = '<div class="notice err">Guild ID required</div>'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const {ok, data} = await api('/api/guild/set', 'POST', {guild_id: gid, region});
+    if(data.warning){
+      $('guildMsg').innerHTML = `<div class="notice warn">⚠ Saved but info fetch failed: ${esc(data.warning)}</div>`;
+    } else if(ok){
+      $('guildMsg').innerHTML = '<div class="notice ok">✓ Guild saved</div>';
+    } else {
+      $('guildMsg').innerHTML = `<div class="notice err">✗ ${esc(data.error||'failed')}</div>`;
+    }
+    renderGuild(data.guild);
+    poll();
+  } finally {
+    btn.disabled = false; btn.innerHTML = '💾 Guild ID Save Karo';
+  }
+};
+
+/* ============ NEW: JOIN ALL + GLORY START ============ */
+$('btnJoinAll').onclick = async ()=>{
+  if(!confirm('Saare active accounts ko guild join karwao?')) return;
+  const btn = $('btnJoinAll');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Joining…';
+  try {
+    const {ok,data} = await api('/api/guild/join-all','POST',{});
+    if(ok) alert(`Done: ${data.ok}/${data.total} success`);
+    else alert('Failed: ' + (data.error||''));
+    await loadActive();
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📨 Saare accounts ko guild join karwao';
+  }
+};
+
+$('btnStartGlory').onclick = async ()=>{
+  const btn = $('btnStartGlory');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Starting…';
+  try {
+    const {ok,data} = await api('/api/glory/start','POST',{});
+    if(!ok) alert('Start failed: ' + (data.error||''));
+    else alert('✓ Glory started');
+    poll();
+  } finally {
+    btn.disabled = false; btn.innerHTML = '▶ Glory Start Karo';
+  }
+};
+
+/* ============ POLL ============ */
+async function poll2(){
+  try {
+    const {data} = await api('/api/automation');
+    if(data.guild) renderGuild(data.guild);
+    if(data.guild_live) renderLive(data.guild_live);
+  } catch(e){}
+}
+
+async function init(){
+  await poll();
+  await loadCreated();
+  await loadActive();
+}
+init();
+setInterval(poll, 3000);
+setInterval(pollStats, 4000);
+setInterval(loadCreated, 6000);
+setInterval(loadActive, 5000);
+
+/* ---------- nav: highlight section ---------- */
 (function(){const links=[].slice.call(document.querySelectorAll('.nav a'));
  if(!links.length||typeof IntersectionObserver==='undefined')return;
  const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'-35% 0px -60% 0px'});
